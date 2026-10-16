@@ -131,3 +131,45 @@ Environment: PHP 8.3, SQLite, server run with `composer start`
   Screenshot: `docs/screenshots/patch-5-xss-blocked.png`
 - **Normal use:** posting a normal comment works, and the welcome post's
   `<strong>` and `<img>` still render (verified).
+
+## Patch #6: Enforce ownership on delete/edit actions (A01 Broken Access Control - IDOR)
+
+- **Lab 4 finding:** #5 (IDOR — delete any comment), plus the identical
+  root-cause flaw found in `delete_topic.php` and `edit_topic.php` while fixing
+  it.
+- **OWASP:** A01 Broken Access Control (IDOR)
+- **Location:** `public/delete_comment.php` line 8 (unconditional DELETE by id);
+  same pattern in `public/delete_topic.php` and `public/edit_topic.php`
+- **Exploit re-run (pre-fix):** logged in as `alice`, requesting
+  `GET /delete_comment.php?id=2&topic_id=1` deleted bob's comment; likewise
+  `delete_topic.php?id=1` deleted the admin's topic and `edit_topic.php?id=1`
+  opened the admin's topic for editing.
+- **Root cause:** these state-changing actions operated on an id from the
+  request without checking that the current user owns the target object.
+- **Fix:** added a `can_modify($ownerId)` helper (owner **or** admin) in
+  `src/helpers.php`. `delete_comment.php` and `delete_topic.php` now look up the
+  row's `user_id` and delete only when `can_modify()` passes; `edit_topic.php`
+  checks ownership before showing the form and before saving (returns 403
+  otherwise). The Edit/Delete-topic buttons and per-comment delete links in
+  `topic.php` are now shown only to the owner/admin.
+- **Result (post-fix):** alice's attempt to delete bob's comment leaves it in
+  place (2 comments remain), and bob's comment no longer shows a delete link to
+  her while her own does; delete/edit of others' topics is refused (403).
+  Admin can still moderate any content (verified). Screenshot:
+  `docs/screenshots/patch-6-idor-ownership-blocked.png`
+- **Normal use:** alice can still delete her own comment, and delete/edit her
+  own topics (verified).
+
+---
+
+## Notes on residual items (not in the Lab 4 log, not patched)
+
+These were observed but are outside the five documented findings, listed for
+completeness:
+
+- **CSRF:** state-changing actions still lack anti-forgery tokens, and
+  delete actions happen over GET. An anti-CSRF token + POST-only deletes would
+  close this.
+- **`display_errors` on:** `src/config.php` enables `display_errors`, which can
+  leak stack traces in production. The per-feature error leaks called out in the
+  Lab 4 log were removed in Patches #1–#3.
