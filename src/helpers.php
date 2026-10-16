@@ -42,6 +42,23 @@ function current_user(): ?array
     return $user ?: null;
 }
 
+/**
+ * True if the logged-in user owns the object (by owner user id) or is an admin.
+ * Used to gate state-changing actions so a user cannot edit/delete another
+ * user's content by guessing its id.
+ */
+function can_modify(?int $ownerId): bool
+{
+    if (!is_logged_in()) {
+        return false;
+    }
+    if ((int) $_SESSION['user_id'] === (int) $ownerId) {
+        return true;
+    }
+    $u = current_user();
+    return $u !== null && !empty($u['is_admin']);
+}
+
 function require_login(): void
 {
     if (!is_logged_in()) {

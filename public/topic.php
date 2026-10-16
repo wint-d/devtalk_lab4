@@ -49,7 +49,7 @@ render_header($topic['title']);
 
         <div class="topic-body"><?= clean_html($topic['body']) ?></div>
 
-        <?php if ($user): ?>
+        <?php if ($user && can_modify((int) $topic['user_id'])): ?>
             <div class="mt-3 d-flex gap-2">
                 <a class="btn btn-sm btn-outline-secondary"
                     href="edit_topic.php?id=<?= (int) $topic['id'] ?>">Edit</a>
@@ -73,7 +73,7 @@ render_header($topic['title']);
                         <strong><?= htmlspecialchars($c['username']) ?></strong>
                         · <?= fmt_date($c['created_at']) ?>
                     </span>
-                    <?php if ($user): ?>
+                    <?php if ($user && can_modify((int) $c['user_id'])): ?>
                         <a class="small text-danger text-decoration-none"
                             href="delete_comment.php?id=<?= (int) $c['id'] ?>&topic_id=<?= (int) $topic['id'] ?>">delete</a>
                     <?php endif; ?>

@@ -15,6 +15,16 @@ if (!$topic) {
     exit;
 }
 
+// Guard both the edit form (GET) and the save (POST): only the owner or an
+// admin may edit this topic.
+if (!can_modify((int) $topic['user_id'])) {
+    http_response_code(403);
+    render_header('Forbidden');
+    echo '<div class="alert alert-danger">You can only edit your own topics.</div>';
+    render_footer();
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = trim($_POST['title'] ?? '');
     $body  = $_POST['body'] ?? '';
