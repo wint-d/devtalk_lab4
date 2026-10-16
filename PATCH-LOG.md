@@ -83,3 +83,22 @@ Environment: PHP 8.3, SQLite, server run with `composer start`
   local address." Screenshot: `docs/screenshots/patch-3-ssrf-blocked.png`
 - **Normal use:** a real external image URL (`https://httpbin.org/image/png`)
   still previews — returns `200` with `Content-Type: image/png` (verified).
+
+## Patch #4: Scope bio update to the logged-in user (A01 Broken Access Control - IDOR)
+
+- **Lab 4 finding:** #3 (IDOR — profile bio)
+- **OWASP:** A01 Broken Access Control (IDOR)
+- **Location:** `public/profile.php` lines 6-10 (UPDATE used `$_POST['user_id']`)
+- **Exploit re-run (pre-fix):** logged in as `alice`, `POST /profile.php`
+  with `user_id=1` and `bio=PWNED_BY_ALICE` overwrote the admin's bio.
+- **Root cause:** the update trusted the `user_id` supplied in the request
+  instead of binding the action to the authenticated user.
+- **Fix:** the update now always targets `$_SESSION['user_id']`; the posted
+  `user_id` is ignored and the hidden field removed. The "Update bio" form is
+  only rendered on the viewer's own profile
+  (`$me['id'] === $profile['id']`).
+- **Result (post-fix):** the same request no longer changes the admin bio —
+  it edits alice's own row instead; the admin profile still shows
+  "Site administrator. Please be respectful."
+  Screenshot: `docs/screenshots/patch-4-bio-idor-blocked.png`
+- **Normal use:** alice can still update her own bio (verified).
