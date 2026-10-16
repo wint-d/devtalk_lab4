@@ -5,6 +5,27 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+/**
+ * Sanitize user-supplied HTML (used for topic bodies, where limited HTML is an
+ * intended feature). Keeps a safe subset of tags and strips scripts, event
+ * handlers, and dangerous URL schemes so stored content cannot run as script.
+ */
+function clean_html(string $html): string
+{
+    static $purifier = null;
+    if ($purifier === null) {
+        require_once __DIR__ . '/../vendor/autoload.php';
+        $config = HTMLPurifier_Config::createDefault();
+        $config->set('HTML.Allowed',
+            'p,br,strong,b,em,i,u,code,pre,blockquote,ul,ol,li,a[href|title],img[src|alt]');
+        $config->set('URI.AllowedSchemes', ['http' => true, 'https' => true]);
+        // No on-disk definition cache (avoids needing a writable vendor dir).
+        $config->set('Cache.DefinitionImpl', null);
+        $purifier = new HTMLPurifier($config);
+    }
+    return $purifier->purify($html);
+}
+
 function is_logged_in(): bool
 {
     return isset($_SESSION['user_id']);
