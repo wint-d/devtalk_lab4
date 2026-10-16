@@ -7,11 +7,18 @@ $results = [];
 $sqlError = '';
 
 if ($q !== '') {
-    $sql = "SELECT id, title, body FROM topics WHERE title LIKE '%$q%' OR body LIKE '%$q%' ORDER BY created_at DESC";
+    // Bind the LIKE pattern as a parameter so the search term is always data,
+    // never part of the SQL text.
+    $sql  = 'SELECT id, title, body FROM topics
+             WHERE title LIKE ? OR body LIKE ? ORDER BY created_at DESC';
+    $like = '%' . $q . '%';
     try {
-        $results = db()->query($sql)->fetchAll();
+        $stmt = db()->prepare($sql);
+        $stmt->execute([$like, $like]);
+        $results = $stmt->fetchAll();
     } catch (PDOException $e) {
-        $sqlError = $e->getMessage() . ' — query: ' . $sql;
+        // Do not leak the query or the raw exception to the client.
+        $sqlError = 'The search could not be completed.';
     }
 }
 
