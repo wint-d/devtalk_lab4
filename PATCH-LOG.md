@@ -102,3 +102,32 @@ Environment: PHP 8.3, SQLite, server run with `composer start`
   "Site administrator. Please be respectful."
   Screenshot: `docs/screenshots/patch-4-bio-idor-blocked.png`
 - **Normal use:** alice can still update her own bio (verified).
+
+## Patch #5: Encode/sanitize user content (A05 Injection - Cross-Site Scripting)
+
+- **Lab 4 finding:** #4 (XSS — stored & reflected)
+- **OWASP:** A05 Injection (Cross-Site Scripting)
+- **Location:** `public/topic.php` line 50 (topic body) and line 81 (comment
+  body); `public/search.php` line 30 (reflected `q`)
+- **Exploit re-run (pre-fix):** a comment of
+  `<script>alert(document.cookie)</script>` / `<img src=x onerror=alert(1)>`
+  was stored and emitted raw into every topic view (stored XSS);
+  `search.php?q=<svg onload=...>` echoed the payload raw into the page
+  (reflected XSS).
+- **Root cause:** user-supplied text was written into the HTML response with no
+  encoding. The topic body is intentionally "HTML allowed", but it was trusted
+  verbatim with no sanitization.
+- **Fix:**
+  - Comment body and the reflected search term are now output with
+    `htmlspecialchars()` — they render as inert text.
+  - The topic body (a real limited-HTML feature) is run through **HTML
+    Purifier** (`clean_html()` in `src/helpers.php`), which keeps a safe tag
+    subset (`strong`, `em`, `a`, `img`, lists, `code`, …) and strips
+    `<script>`, event handlers like `onerror`, and non-http(s) URL schemes.
+    Purifying at render time also neutralizes any rows already stored.
+- **Result (post-fix):** the comment payload displays as literal text and does
+  not execute; the search payload is escaped; the welcome topic still shows
+  bold text and its image.
+  Screenshot: `docs/screenshots/patch-5-xss-blocked.png`
+- **Normal use:** posting a normal comment works, and the welcome post's
+  `<strong>` and `<img>` still render (verified).
