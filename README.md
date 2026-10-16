@@ -24,10 +24,13 @@ php -m | grep -i sqlite
 From the `forum` directory:
 
 ```bash
-# 1. Build and seed the database
+# 1. Install PHP dependencies (adds HTML Purifier, used to sanitize topic HTML)
+composer install
+
+# 2. Build and seed the database
 composer reset-db
 
-# 2. Start the development server
+# 3. Start the development server
 composer start
 ```
 

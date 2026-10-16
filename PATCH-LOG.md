@@ -64,9 +64,11 @@ Environment: PHP 8.3, SQLite, server run with `composer start`
   on raw `$_GET['url']`)
 - **Exploit re-run (pre-fix):** `GET /fetch_image.php?url=../src/config.php`
   returned the contents of `src/config.php` (revealing `DB_PATH`,
-  `forum.sqlite`, upload paths); `url=file:///etc/passwd` and
-  `url=http://127.0.0.1:8000/...` likewise let the server read local files /
-  reach internal services.
+  `forum.sqlite`, upload paths). Confirmed against the original code,
+  `url=file:///etc/passwd` returned the contents of `/etc/passwd`
+  (`root:*:0:0:…`). A loopback/private URL such as
+  `http://127.0.0.1:<port>/…` could likewise be aimed at internal-only
+  services the server can reach but an outside user cannot.
 - **Root cause:** the server fetched any attacker-supplied URL with no scheme
   restriction, no destination-address check, and followed redirects.
 - **Fix:** (1) require an absolute `http`/`https` URL via `parse_url` — this
@@ -131,6 +133,13 @@ Environment: PHP 8.3, SQLite, server run with `composer start`
   Screenshot: `docs/screenshots/patch-5-xss-blocked.png`
 - **Normal use:** posting a normal comment works, and the welcome post's
   `<strong>` and `<img>` still render (verified).
+- **Dependency / behaviour notes:** this patch adds the Composer dependency
+  `ezyang/htmlpurifier`. `composer.json` / `composer.lock` were committed with
+  Patch #1 (the first commit that staged them); run `composer install` after
+  cloning. Comments are now rendered as plain text by design — e.g. the seeded
+  comment on topic 2 ("Also `<code>gap</code>` is underrated.") now shows the
+  tags literally instead of formatting them. This is intentional: comments were
+  never an HTML feature, so escaping is the correct, lower-risk choice.
 
 ## Patch #6: Enforce ownership on delete/edit actions (A01 Broken Access Control - IDOR)
 
