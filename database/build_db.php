@@ -42,7 +42,9 @@ $insUser = $pdo->prepare(
 // stagger created_at a little
 $offsets = ['-30 days', '-25 days', '-20 days', '-15 days'];
 foreach ($users as $i => $u) {
-    $insUser->execute([$u[0], $u[1], $u[2], $u[3], $u[4], $offsets[$i]]);
+    // Seed hashed passwords so the app can verify with password_verify().
+    $hash = password_hash($u[2], PASSWORD_DEFAULT);
+    $insUser->execute([$u[0], $u[1], $hash, $u[3], $u[4], $offsets[$i]]);
 }
 
 // --- Seed topics ----------------------------------------------------------

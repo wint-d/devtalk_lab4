@@ -6,21 +6,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
 
-    $sql = "SELECT * FROM users
-            WHERE username = '$username' AND password = '$password'";
+    // Parameterized lookup by username only; the password is verified in PHP
+    // against the stored hash. User input never becomes part of the SQL text.
+    $stmt = db()->prepare('SELECT * FROM users WHERE username = ?');
+    $stmt->execute([$username]);
+    $row = $stmt->fetch();
 
-    try {
-        $row = db()->query($sql)->fetch();
-        if ($row) {
-            $_SESSION['user_id'] = (int) $row['id'];
-            header('Location: index.php');
-            exit;
-        }
-        $error = 'Invalid username or password.';
-    } catch (PDOException $e) {
-        $error = 'Login query failed: ' . $e->getMessage()
-            . '<br><code>' . htmlspecialchars($sql) . '</code>';
+    if ($row && password_verify($password, $row['password'])) {
+        // New session id on privilege change to prevent session fixation.
+        session_regenerate_id(true);
+        $_SESSION['user_id'] = (int) $row['id'];
+        header('Location: index.php');
+        exit;
     }
+
+    // Generic message: do not reveal whether the username exists, and never
+    // echo the query or the raw exception back to the client.
+    $error = 'Invalid username or password.';
 }
 
 render_header('Log in');
@@ -29,7 +31,7 @@ render_header('Log in');
     <div class="col-md-5">
         <h1 class="h4 mb-3">Log in</h1>
         <?php if ($error): ?>
-            <div class="alert alert-danger"><?= $error ?></div>
+            <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
         <form method="post" class="card card-body shadow-sm">
             <div class="mb-3">

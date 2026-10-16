@@ -11,15 +11,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'All fields are required.';
     } else {
         try {
+            // Store a one-way hash, never the plaintext password.
+            $hash = password_hash($password, PASSWORD_DEFAULT);
             $stmt = db()->prepare(
                 'INSERT INTO users (username, email, password) VALUES (?, ?, ?)'
             );
-            $stmt->execute([$username, $email, $password]);
+            $stmt->execute([$username, $email, $hash]);
+            session_regenerate_id(true);
             $_SESSION['user_id'] = (int) db()->lastInsertId();
             header('Location: index.php');
             exit;
         } catch (PDOException $e) {
-            $error = 'Could not register: ' . $e->getMessage();
+            // Do not leak the underlying database error to the client.
+            $error = 'Could not register. That username may already be taken.';
         }
     }
 }
@@ -30,7 +34,7 @@ render_header('Register');
     <div class="col-md-5">
         <h1 class="h4 mb-3">Create an account</h1>
         <?php if ($error): ?>
-            <div class="alert alert-danger"><?= $error ?></div>
+            <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
         <form method="post" class="card card-body shadow-sm">
             <div class="mb-3">
