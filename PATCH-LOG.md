@@ -55,3 +55,31 @@ Environment: PHP 8.3, SQLite, server run with `composer start`
   Screenshot: `docs/screenshots/patch-2-search-sqli-blocked.png`
 - **Normal use:** searching `CSS` still returns "Favourite CSS layout tricks?"
   (verified).
+
+## Patch #3: Validate image-fetch URL (A01 Broken Access Control - SSRF)
+
+- **Lab 4 finding:** #2 (SSRF)
+- **OWASP:** A01 Broken Access Control (SSRF)
+- **Location:** `public/fetch_image.php` line 15 (`file_get_contents($url, ...)`
+  on raw `$_GET['url']`)
+- **Exploit re-run (pre-fix):** `GET /fetch_image.php?url=../src/config.php`
+  returned the contents of `src/config.php` (revealing `DB_PATH`,
+  `forum.sqlite`, upload paths); `url=file:///etc/passwd` and
+  `url=http://127.0.0.1:8000/...` likewise let the server read local files /
+  reach internal services.
+- **Root cause:** the server fetched any attacker-supplied URL with no scheme
+  restriction, no destination-address check, and followed redirects.
+- **Fix:** (1) require an absolute `http`/`https` URL via `parse_url` — this
+  rejects `file://`, `php://`, and relative paths like `../src/config.php`;
+  (2) resolve the host and reject loopback/private/reserved IPs with
+  `FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE`; (3) disable redirect
+  following (`follow_location=0`, `max_redirects=0`); (4) serve the response
+  only if its detected MIME type is `image/*`. Error messages are generic.
+- **Residual risk:** DNS rebinding (host resolves to a public IP at check time,
+  a private IP at fetch time) is not fully closed by this check; a production
+  fix would pin the validated IP for the actual connection.
+- **Result (post-fix):** `url=../src/config.php` returns `400 Invalid URL.`;
+  `file://` returns 400; loopback returns 400 "Refusing to fetch a private or
+  local address." Screenshot: `docs/screenshots/patch-3-ssrf-blocked.png`
+- **Normal use:** a real external image URL (`https://httpbin.org/image/png`)
+  still previews — returns `200` with `Content-Type: image/png` (verified).
