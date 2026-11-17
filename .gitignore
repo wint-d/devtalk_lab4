@@ -224,3 +224,9 @@ public/uploads/*
 *ANSWER*KEY*
 *VULNERAB*
 *vulnerab*solution*
+
+# Lab 8: JWT signing key and other runtime files
+storage/
+
+# Lab 8: attacker site must never be committed (safety net)
+attacker/
