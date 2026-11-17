@@ -97,7 +97,7 @@ function render_header(string $title = APP_NAME): void
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title><?= htmlspecialchars($title) ?> · <?= APP_NAME ?></title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link href="assets/vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
         <link href="assets/app.css" rel="stylesheet">
     </head>
 
@@ -134,7 +134,7 @@ function render_header(string $title = APP_NAME): void
         <footer class="container text-center text-body-secondary py-4 small">
             <?= APP_NAME ?> — CST8265 lab application. For educational use only.
         </footer>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
         <script src="assets/app.js" defer></script>
     </body>
 
